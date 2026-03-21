@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vidya — AI Tutor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@400;500;600;700&display=swap');
+:root{--s:#FF6B00;--sl:#FF8C38;--sd:rgba(255,107,0,0.12);--f:#1A3A2A;--fl:#2D5C3E;--cr:#FFF8EE;--tx:#1C1C1C;--mu:#7A7A7A;--bo:rgba(255,107,0,0.2);--ca:#fff;--sh:0 4px 24px rgba(0,0,0,0.08);--ok:#2D7A4F;--wn:#C45A00}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sora',sans-serif;background:var(--cr);color:var(--tx);min-height:100vh}
+header{background:var(--f);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--s);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:11px}
+.logo-icon{width:36px;height:36px;background:var(--s);border-radius:50%;display:grid;place-items:center;font-size:17px}
+.logo-text{color:#fff;font-size:20px;font-weight:700}
+.logo-sub{color:rgba(255,255,255,0.5);font-size:10px;font-family:'Space Mono',monospace;letter-spacing:2px}
+.badge{background:var(--sd);border:1px solid var(--s);color:var(--sl);font-size:10px;font-family:'Space Mono',monospace;padding:4px 11px;border-radius:100px}
+.app{display:grid;grid-template-columns:280px 1fr 250px;height:calc(100vh - 60px)}
+.left{background:#fff;border-right:1px solid var(--bo);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:12px 14px 9px;border-bottom:1px solid var(--bo);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:10px;font-family:'Space Mono',monospace;letter-spacing:2px;color:var(--s);font-weight:700;text-transform:uppercase}
+.upload-area{margin:12px;border:2px dashed var(--bo);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sd)}
+.upload-area:hover{border-color:var(--s);background:rgba(255,107,0,0.16)}
+.upload-area .icon{font-size:24px;margin-bottom:5px}
+.upload-area p{font-size:11.5px;color:var(--mu);line-height:1.6}
+.upload-area strong{color:var(--s)}
+#file-input{display:none}
+.book-card{margin:0 12px 10px;background:var(--f);border-radius:8px;padding:9px 11px;display:none}
+.book-card.show{display:block}
+.book-name{color:#fff;font-size:11.5px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book-meta{color:rgba(255,255,255,0.5);font-size:9.5px;font-family:'Space Mono',monospace}
+.ocr-progress{margin:0 12px 10px;background:#f0f9f4;border:1px solid #2D7A4F33;border-radius:8px;padding:10px 12px;display:none}
+.ocr-progress.show{display:block}
+.ocr-title{font-size:11px;color:var(--ok);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ocr-bar-wrap{background:#ddd;border-radius:100px;height:6px;overflow:hidden;margin-bottom:4px}
+.ocr-bar{background:var(--ok);height:100%;border-radius:100px;transition:width .4s ease;width:0%}
+.ocr-status{font-size:9.5px;color:var(--mu);font-family:'Space Mono',monospace}
+.ch-label{padding:0 14px 5px;font-size:9.5px;font-family:'Space Mono',monospace;color:var(--mu);letter-spacing:1px;display:none}
+.ch-list{overflow-y:auto;flex:1;padding:0 6px 12px}
+.ch-item{padding:6px 7px;border-radius:7px;display:flex;align-items:flex-start;gap:7px;margin-bottom:2px;border:1px solid transparent;font-size:11px;line-height:1.4}
+.ch-item.ready{background:#f0f9f4;border-color:#2D7A4F22}
+.ch-item.ocring{background:rgba(255,107,0,0.08);border-color:var(--bo)}
+.ch-item.used{background:#E8F5EE;border-color:#2D7A4F44}
+.ch-item.pruned{opacity:0.35}
+.ch-num{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--s);min-width:18px;padding-top:1px}
+.ch-text{flex:1;color:var(--tx)}
+.ch-badge{font-size:8.5px;padding:1px 5px;border-radius:100px;white-space:nowrap;margin-left:auto}
+.ch-badge.ok{background:#D1FAE5;color:#065F46}
+.ch-badge.used{background:#D1FAE5;color:#065F46}
+.ch-badge.skip{background:#FEE2CC;color:#C45A00}
+.main{display:flex;flex-direction:column;overflow:hidden;background:var(--cr)}
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:11px}
+.msg{max-width:84%;animation:slideup .25s ease}
+@keyframes slideup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{align-self:flex-end}
+.msg.bot{align-self:flex-start}
+.bubble{padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.65}
+.msg.user .bubble{background:var(--f);color:#fff;border-bottom-right-radius:3px}
+.msg.bot .bubble{background:var(--ca);border:1px solid var(--bo);border-bottom-left-radius:3px;box-shadow:var(--sh)}
+.msg-meta{font-size:9.5px;color:var(--mu);margin-top:4px;font-family:'Space Mono',monospace;display:flex;gap:7px;align-items:center}
+.msg.user .msg-meta{justify-content:flex-end}
+.tag{display:inline-flex;align-items:center;background:#fff;border:1px solid #ddd;padding:2px 6px;border-radius:100px;font-size:9px;font-family:'Space Mono',monospace}
+.tag.green{border-color:#2D7A4F33;background:#E8F5EE;color:var(--ok)}
+.tag.orange{border-color:#F5C6A033;background:#FFF3E8;color:var(--wn)}
+.prune-card{background:#fff;border:1px solid var(--bo);border-left:4px solid var(--s);border-radius:0 8px 8px 0;padding:8px 11px;font-size:11px;color:var(--mu);margin-top:5px;display:flex;gap:9px;align-items:flex-start}
+.prune-card strong{color:var(--tx);font-size:11.5px;display:block;margin-bottom:2px}
+.log{font-size:10px;font-family:'Space Mono',monospace;color:var(--mu);padding:7px 11px;background:#f9f6f2;border-radius:6px;margin-top:5px;line-height:1.9}
+.log .ok{color:var(--ok)}.log .sk{color:var(--wn)}
+.welcome{background:var(--ca);border:1px solid var(--bo);border-radius:14px;padding:24px;max-width:460px;margin:auto;box-shadow:var(--sh);text-align:center}
+.welcome h2{font-size:19px;margin-bottom:8px;color:var(--f)}
+.welcome p{font-size:12.5px;color:var(--mu);line-height:1.65}
+.steps{display:flex;gap:5px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.step{background:var(--sd);border:1px solid var(--s);border-radius:100px;padding:4px 11px;font-size:11px;color:var(--f)}
+.hints{display:flex;flex-wrap:wrap;gap:5px;padding:0 16px 9px}
+.hint{background:var(--sd);border:1px solid var(--s);color:var(--f);font-size:11px;padding:4px 9px;border-radius:100px;cursor:pointer;transition:all .15s}
+.hint:hover{background:var(--s);color:#fff}
+.key-bar{padding:7px 16px;background:#fffbf5;border-top:1px solid var(--bo);display:flex;gap:6px;align-items:center}
+.key-bar label{color:var(--mu);white-space:nowrap;font-family:'Space Mono',monospace;font-size:10px}
+.key-bar input{flex:1;border:1.5px solid var(--bo);border-radius:7px;padding:5px 9px;font-size:11px;font-family:'Space Mono',monospace;background:#fff;outline:none;color:var(--tx)}
+.key-bar input:focus{border-color:var(--s)}
+.key-bar .save{background:var(--f);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer}
+.key-bar .save:hover{background:var(--fl)}
+.key-status{font-size:10px;white-space:nowrap}
+.input-bar{padding:11px 16px;background:#fff;border-top:1px solid var(--bo);display:flex;gap:7px;align-items:flex-end}
+.input-wrap{flex:1;background:var(--cr);border:1.5px solid var(--bo);border-radius:10px;padding:8px 12px;transition:border-color .2s}
+.input-wrap:focus-within{border-color:var(--s)}
+#q-input{width:100%;border:none;background:transparent;outline:none;font-family:'Sora',sans-serif;font-size:13px;color:var(--tx);resize:none;min-height:20px;max-height:90px;line-height:1.5}
+#q-input::placeholder{color:#bbb}
+.send-btn{background:var(--s);border:none;cursor:pointer;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:15px;transition:all .2s;flex-shrink:0}
+.send-btn:hover{background:var(--sl);transform:scale(1.04)}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.right{background:#fff;border-left:1px solid var(--bo);overflow-y:auto}
+.stat-sec{padding:13px;border-bottom:1px solid var(--bo)}
+.stat-title{font-size:9.5px;font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--s);margin-bottom:9px;font-weight:700}
+.stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.stat-label{font-size:11px;color:var(--mu)}
+.stat-val{font-size:12.5px;font-weight:600;font-family:'Space Mono',monospace}
+.stat-val.g{color:var(--ok)}.stat-val.o{color:var(--s)}.stat-val.r{color:#dc2626}
+.bar-track{height:7px;background:#f0f0f0;border-radius:100px;overflow:hidden;margin-top:5px}
+.bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--s),#FF8C38);transition:width .5s ease}
+.bar-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--mu);margin-bottom:3px}
+.cmp-table{width:100%;border-collapse:collapse;margin-top:5px}
+.cmp-table th,.cmp-table td{font-size:10px;padding:4px 6px;text-align:left;border-bottom:1px solid #f0f0f0}
+.cmp-table th{color:var(--mu);font-family:'Space Mono',monospace;font-weight:400}
+.cmp-table td{font-family:'Space Mono',monospace}
+.cmp-table .hl td{background:#E8F5EE}
+.info-box{background:var(--f);color:#fff;border-radius:7px;padding:9px 11px;font-size:10.5px;line-height:1.6;margin-top:5px}
+.info-box strong{color:var(--sl);display:block;margin-bottom:3px;font-family:'Space Mono',monospace}
+.spinner{width:16px;height:16px;border:2px solid var(--bo);border-top-color:var(--s);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.thinking{background:var(--ca);border:1px solid var(--bo);border-radius:14px;border-bottom-left-radius:3px;padding:11px 15px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu);box-shadow:var(--sh)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#ddd;border-radius:10px}
+@media(max-width:900px){.app{grid-template-columns:1fr}.left,.right{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">📚</div>
+    <div><div class="logo-text">Vidya</div><div class="logo-sub">AI TUTOR · RURAL INDIA</div></div>
+  </div>
+  <div class="badge">CONTEXT PRUNING + BROWSER OCR</div>
+</header>
+<div class="app">
+  <div class="left">
+    <div class="panel-header">
+      <span class="panel-title">📖 Textbook</span>
+      <span id="ch-count" style="font-size:9.5px;color:var(--mu);font-family:'Space Mono',monospace"></span>
+    </div>
+    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📄</div>
+      <p><strong>Upload any Textbook PDF</strong><br>OCR runs in your browser<br>Works with any font encoding</p>
+    </div>
+    <input type="file" id="file-input" accept=".pdf">
+    <div class="book-card" id="book-card">
+      <div class="book-name" id="book-name"></div>
+      <div class="book-meta" id="book-meta"></div>
+    </div>
+    <div class="ocr-progress" id="ocr-progress">
+      <div class="ocr-title" id="ocr-title">Extracting text…</div>
+      <div class="ocr-bar-wrap"><div class="ocr-bar" id="ocr-bar"></div></div>
+      <div class="ocr-status" id="ocr-status">Starting…</div>
+    </div>
+    <div class="ch-label" id="ch-label">CHAPTERS</div>
+    <div class="ch-list" id="ch-list"></div>
+  </div>
+
+  <div class="main">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div style="font-size:42px;margin-bottom:9px">🌿</div>
+        <h2>Namaste! I'm Vidya</h2>
+        <p>Upload <strong>any</strong> PDF textbook. I use <strong>Tesseract.js</strong> — OCR that runs entirely in your browser — to read every chapter. Then questions are answered from cached text. No images ever sent. Works on 2G.</p>
+        <div class="steps">
+          <div class="step">① Add Groq Key</div>
+          <div class="step">② Upload PDF</div>
+          <div class="step">③ Wait for OCR ~1-2 min</div>
+          <div class="step">④ Ask anything instantly</div>
+        </div>
+      </div>
+    </div>
+    <div class="hints" id="hints" style="display:none"></div>
+    <div class="key-bar">
+      <label>🔑 GROQ KEY</label>
+      <input type="password" id="key-input" placeholder="gsk_..." oninput="onKeyInput()">
+      <button class="save" onclick="saveKey()">Save</button>
+      <span class="key-status" id="key-status" style="color:var(--wn)">⚠️ Required</span>
+    </div>
+    <div class="input-bar">
+      <div class="input-wrap">
+        <textarea id="q-input" placeholder="Ask a question about your textbook…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      </div>
+      <button class="send-btn" id="send-btn" onclick="ask()" disabled>➤</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="stat-sec">
+      <div class="stat-title">💡 How It Works</div>
+      <div class="info-box">
+        <strong>2-PHASE PIPELINE</strong>
+        <b>Setup (once):</b> Tesseract.js OCRs 3 pages per chapter — entirely in your browser. No server. No API calls for OCR.<br><br>
+        <b>Query (instant):</b> Keywords prune chapters → only relevant text sent to Groq as plain text → answer from your actual book.<br><br>
+        <b>2G friendly:</b> Each query is ~3-5KB of plain text.
+      </div>
+    </div>
+    <div class="stat-sec">
+      <div class="stat-title">📊 Session</div>
+      <div class="stat-row"><span class="stat-label">Queries</span><span class="stat-val o" id="s-queries">0</span></div>
+      <div class="stat-row"><span class="stat-label">Avg chapters pruned</span><span class="stat-val g" id="s-pruned">—</span></div>
+      <div class="stat-row"><span class="stat-label">Tokens sent (pruned)</span><span class="stat-val g" id="s-used">0</span></div>
+      <div class="stat-row"><span class="stat-label">Tokens (baseline)</span><span class="stat-val r" id="s-base">0</span></div>
+    </div>
+    <div class="stat-sec">
+      <div class="stat-title">💰 Savings</div>
+      <div class="stat-row"><span class="stat-label">Tokens saved</span><span class="stat-val g" id="s-saved">0</span></div>
+      <div class="stat-row"><span class="stat-label">Est. cost saved</span><span class="stat-val g" id="s-cost">$0.000000</span></div>
+      <div class="bar-labels"><span>Context used</span><span id="s-pct">0%</span></div>
+      <div class="bar-track"><div class="bar-fill" id="s-bar" style="width:0%"></div></div>
+    </div>
+    <div class="stat-sec">
+      <div class="stat-title">🔬 Last Query</div>
+      <table class="cmp-table">
+        <thead><tr><th>System</th><th>Tokens</th><th>Cost</th></tr></thead>
+        <tbody id="cmp-body"><tr><td colspan="3" style="color:var(--mu)">No query yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+'use strict';
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let PDF=null,TOTAL=0,CHAPTERS=[],OCR_DONE=false,GROQ_KEY='';
+let WORKER=null;
+const COST=0.00000005;
+let SESSION={q:0,pruned:0,used:0,base:0};
+
+// KEY
+function saveKey(){const k=document.getElementById('key-input').value.trim();GROQ_KEY=k;setKeyStatus(k);}
+function onKeyInput(){const k=document.getElementById('key-input').value.trim();GROQ_KEY=k;setKeyStatus(k);}
+function setKeyStatus(k){const s=document.getElementById('key-status');s.textContent=k?'✅ Ready':'⚠️ Required';s.style.color=k?'var(--ok)':'var(--wn)';}
+
+// UPLOAD
+document.getElementById('file-input').addEventListener('change',async e=>{if(e.target.files[0])await loadPDF(e.target.files[0]);});
+const ua=document.getElementById('upload-area');
+ua.addEventListener('dragover',e=>{e.preventDefault();ua.style.borderColor='var(--s)';});
+ua.addEventListener('dragleave',()=>ua.style.borderColor='');
+ua.addEventListener('drop',async e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')await loadPDF(f);});
+
+async function loadPDF(file){
+  if(!GROQ_KEY){sysMsg('⚠️ Please enter your Groq API key first.');return;}
+  ua.innerHTML='<div class="spinner"></div><p style="margin-top:8px;font-size:11px;color:var(--mu)">Loading PDF…</p>';
+  try{
+    PDF=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    TOTAL=PDF.numPages;
+    document.getElementById('book-card').classList.add('show');
+    document.getElementById('book-name').textContent=file.name.replace(/\.pdf$/i,'');
+    document.getElementById('book-meta').textContent=TOTAL+' pages · detecting chapters…';
+    ua.innerHTML='<div class="icon">⚙️</div><p style="font-size:11px;color:var(--mu)">Detecting chapters…</p>';
+    CHAPTERS=await detectChapters();
+    document.getElementById('book-meta').textContent=TOTAL+' pages · '+CHAPTERS.length+' chapters · OCR running…';
+    document.getElementById('ch-label').style.display='block';
+    document.getElementById('ch-count').textContent=CHAPTERS.length+' ch';
+    renderChapters();
+    await runOCR();
+  }catch(err){
+    console.error(err);
+    ua.innerHTML='<div class="icon">⚠️</div><p style="font-size:11px;color:var(--mu)">'+esc(err.message)+'</p>';
+  }
+}
+
+// CHAPTER DETECTION
+async function detectChapters(){
+  // Try native text first (fast)
+  let fullText='';
+  const sampleEnd=Math.min(20,TOTAL);
+  for(let p=1;p<=sampleEnd;p++){
+    const page=await PDF.getPage(p);
+    const tc=await page.getTextContent();
+    fullText+=tc.items.map(i=>i.str).join(' ')+'\n';
+  }
+  const pat=/(?:chapter|CHAPTER)\s*(\d+)\s*[:\-\u2013\u2014]?\s*([A-Z][^\n]{4,60})/gi;
+  const matches=[...fullText.matchAll(pat)];
+  if(matches.length>=2){
+    return matches.map((m,i)=>{
+      const ratio=m.index/fullText.length;
+      const startPg=Math.max(1,Math.floor(ratio*TOTAL));
+      const nextRatio=matches[i+1]?matches[i+1].index/fullText.length:1;
+      const endPg=Math.min(TOTAL,Math.floor(nextRatio*TOTAL)+1);
+      return{number:parseInt(m[1]),title:m[2].trim().replace(/\s+/g,' '),startPage:startPg,endPage:endPg,text:'',tokens:0};
+    });
+  }
+  // Fallback: equal chunks (~20 pages each)
+  const size=Math.ceil(TOTAL/Math.max(5,Math.round(TOTAL/20)));
+  const chs=[];
+  for(let s=1;s<=TOTAL;s+=size){
+    const e=Math.min(TOTAL,s+size-1);
+    chs.push({number:chs.length+1,title:'Pages '+s+'–'+e,startPage:s,endPage:e,text:'',tokens:0});
+  }
+  return chs;
+}
+
+// TESSERACT OCR
+async function initWorker(){
+  if(WORKER)return;
+  WORKER=await Tesseract.createWorker('eng',1,{logger:()=>{}});
+}
+
+async function ocrPageNum(n){
+  const page=await PDF.getPage(n);
+  const vp=page.getViewport({scale:2.0});
+  const cv=document.createElement('canvas');
+  cv.width=vp.width;cv.height=vp.height;
+  await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+  const{data:{text}}=await WORKER.recognize(cv);
+  return text.trim();
+}
+
+function repPages(s,e,n){
+  if(e-s+1<=n)return Array.from({length:e-s+1},(_,i)=>s+i);
+  const out=[s];
+  if(n>=2)out.push(Math.floor((s+e)/2));
+  if(n>=3)out.push(e);
+  return[...new Set(out)].sort((a,b)=>a-b);
+}
+
+async function runOCR(){
+  await initWorker();
+  const prog=document.getElementById('ocr-progress');
+  prog.classList.add('show');
+  const bar=document.getElementById('ocr-bar');
+  const title=document.getElementById('ocr-title');
+  const status=document.getElementById('ocr-status');
+  const total=CHAPTERS.length;
+
+  for(let i=0;i<total;i++){
+    const ch=CHAPTERS[i];
+    title.textContent='Ch.'+ch.number+': '+ch.title;
+    status.textContent=i+' / '+total+' chapters done';
+    bar.style.width=Math.round(i/total*100)+'%';
+    markChapter(i,'ocring');
+
+    const pages=repPages(ch.startPage,ch.endPage,3);
+    const texts=[];
+    for(const pg of pages){
+      try{
+        const t=await ocrPageNum(pg);
+        if(t.length>80)texts.push('[Page '+pg+']\n'+t);
+      }catch(e){console.warn('OCR page '+pg+' failed',e);}
+    }
+    ch.text=texts.join('\n\n');
+    ch.tokens=Math.ceil(ch.text.length/4);
+    markChapter(i,'ready');
+    await sleep(30);
+  }
+
+  bar.style.width='100%';
+  title.textContent='✅ Done! All '+total+' chapters extracted';
+  status.textContent='Ready — questions are now instant & 2G-friendly';
+  document.getElementById('book-meta').textContent=TOTAL+' pages · '+total+' chapters · ready';
+  document.getElementById('ch-count').textContent=total+' ch';
+  ua.innerHTML='<div class="icon">✅</div><p style="font-size:11px;color:var(--mu)"><strong>Ready!</strong> '+total+' chapters extracted.<br>Ask anything — plain text queries, 2G friendly!</p>';
+  document.getElementById('welcome')?.remove();
+  buildHints();
+  renderChapters();
+  document.getElementById('send-btn').disabled=false;
+  OCR_DONE=true;
+  sysMsg('✅ **OCR complete!** All '+total+' chapters extracted from your textbook.\nEvery question now uses plain text only — no images, works perfectly on 2G!');
+}
+
+// PRUNE
+function pruneChapters(q){
+  const ql=q.toLowerCase();
+  const words=ql.split(/\s+/).filter(w=>w.length>3);
+  const scored=CHAPTERS.map((ch,i)=>{
+    let score=0;
+    const tl=ch.title.toLowerCase();
+    const txl=ch.text.toLowerCase();
+    words.forEach(w=>{
+      if(tl.includes(w))score+=3;
+      if(txl.includes(w))score+=1;
+    });
+    return{i,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  if(scored.length>0)return scored.slice(0,2).map(x=>x.i);
+  return[0,1,2].filter(i=>i<CHAPTERS.length);
+}
+
+// ASK
+let loading=false;
+async function ask(){
+  if(loading||!OCR_DONE)return;
+  if(!GROQ_KEY){sysMsg('⚠️ Enter your Groq API key first.');return;}
+  const inp=document.getElementById('q-input');
+  const q=inp.value.trim();if(!q)return;
+  loading=true;inp.value='';autoResize(inp);
+  document.getElementById('send-btn').disabled=true;
+  addUserMsg(q);
+  const tid=addThinking('✂️ Pruning chapters…');
+  try{
+    const usedIdx=pruneChapters(q);
+    const prunedIdx=CHAPTERS.map((_,i)=>i).filter(i=>!usedIdx.includes(i));
+    upThinking(tid,'💬 Answering from textbook…');
+
+    const context=usedIdx.map(i=>'=== Chapter '+CHAPTERS[i].number+': '+CHAPTERS[i].title+' ===\n'+CHAPTERS[i].text.slice(0,4000)).join('\n\n');
+    const baseline=CHAPTERS.reduce((s,c)=>s+c.tokens,0);
+    const usedToks=Math.ceil(context.length/4);
+
+    const prompt='You are Vidya, a friendly AI tutor for students in India.\nAnswer the question using ONLY the textbook content provided below.\nBe accurate, clear, and concise (3–5 sentences). Use simple language.\nIf the answer is not in the text, say so.\n\nTextbook content:\n'+context+'\n\nStudent question: '+q+'\n\nAnswer:';
+    const answer=await callGroq(prompt,500);
+
+    rmThinking(tid);
+    renderChapters(usedIdx,prunedIdx);
+    const log=buildLog(usedIdx,prunedIdx,usedToks,baseline);
+    addBotMsg(answer,{usedIdx,prunedIdx,usedToks,baseline,log});
+    updateStats(prunedIdx.length,usedToks,baseline);
+  }catch(err){
+    rmThinking(tid);
+    addBotMsg('⚠️ '+esc(err.message)+'\n\nCheck your Groq API key is valid.');
+  }
+  loading=false;
+  document.getElementById('send-btn').disabled=false;
+}
+
+function buildLog(used,pruned,ut,bt){
+  const lines=[];
+  used.forEach(i=>lines.push('<span class="ok">✓ KEPT</span> Ch.'+CHAPTERS[i].number+' — '+CHAPTERS[i].title));
+  pruned.forEach(i=>lines.push('<span class="sk">✗ SKIP</span> Ch.'+CHAPTERS[i].number+' — '+CHAPTERS[i].title));
+  lines.push('──────────────────────────────');
+  const pct=Math.round((bt-ut)/bt*100);
+  lines.push('Tokens: '+ut.toLocaleString()+' / '+bt.toLocaleString()+' baseline · saved '+pct+'%');
+  lines.push('Plain text only · No images · 2G ✓');
+  return lines.join('\n');
+}
+
+async function callGroq(prompt,maxT){
+  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY},
+    body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:maxT,messages:[{role:'user',content:prompt}]})
+  });
+  const d=await r.json();
+  if(d.error)throw new Error(d.error.message);
+  return d.choices?.[0]?.message?.content||'';
+}
+
+function updateStats(pruned,used,base){
+  SESSION.q++;SESSION.pruned+=pruned;SESSION.used+=used;SESSION.base+=base;
+  const saved=SESSION.base-SESSION.used,pct=Math.round(SESSION.used/SESSION.base*100);
+  document.getElementById('s-queries').textContent=SESSION.q;
+  document.getElementById('s-pruned').textContent=(SESSION.pruned/SESSION.q).toFixed(1)+' ch/q';
+  document.getElementById('s-used').textContent=SESSION.used.toLocaleString();
+  document.getElementById('s-base').textContent=SESSION.base.toLocaleString();
+  document.getElementById('s-saved').textContent=saved.toLocaleString();
+  document.getElementById('s-cost').textContent='$'+(saved*COST).toFixed(6);
+  document.getElementById('s-pct').textContent=pct+'%';
+  document.getElementById('s-bar').style.width=pct+'%';
+  const ls=base-used,sp=Math.round(ls/base*100);
+  document.getElementById('cmp-body').innerHTML=
+    '<tr class="hl"><td>✅ Pruned</td><td style="color:var(--ok)">'+used.toLocaleString()+'</td><td style="color:var(--ok)">$'+(used*COST).toFixed(6)+'</td></tr>'+
+    '<tr><td>❌ Baseline</td><td style="color:#dc2626">'+base.toLocaleString()+'</td><td style="color:#dc2626">$'+(base*COST).toFixed(6)+'</td></tr>'+
+    '<tr><td style="color:var(--ok);font-weight:600">Saved</td><td style="color:var(--ok);font-weight:600">'+ls.toLocaleString()+'</td><td style="color:var(--ok);font-weight:600">'+sp+'%</td></tr>';
+}
+
+// UI
+function renderChapters(used=[],pruned=[]){
+  const el=document.getElementById('ch-list');el.innerHTML='';
+  CHAPTERS.forEach((ch,i)=>{
+    const u=used.includes(i),p=pruned.includes(i),r=ch.text.length>0;
+    const div=document.createElement('div');
+    div.className='ch-item'+(u?' used':p?' pruned':r?' ready':'');
+    div.innerHTML='<span class="ch-num">'+ch.number+'</span><span class="ch-text">'+ch.title+'</span>'+
+      (u?'<span class="ch-badge used">✓ used</span>':p?'<span class="ch-badge skip">✗</span>':r?'<span class="ch-badge ok">✓</span>':'');
+    el.appendChild(div);
+  });
+}
+function markChapter(idx,status){
+  const el=document.getElementById('ch-list');if(!el)return;
+  const items=el.querySelectorAll('.ch-item');
+  if(items[idx]){
+    items[idx].className='ch-item '+(status==='ocring'?'ocring':'ready');
+    if(status==='ready'){
+      const b=items[idx].querySelector('.ch-badge')||document.createElement('span');
+      b.className='ch-badge ok';b.textContent='✓';
+      if(!items[idx].querySelector('.ch-badge'))items[idx].appendChild(b);
+    }
+  }
+}
+function buildHints(){
+  const h=document.getElementById('hints');h.style.display='flex';h.innerHTML='';
+  CHAPTERS.slice(0,3).forEach(ch=>{
+    const d=document.createElement('div');d.className='hint';
+    d.textContent='What is '+ch.title+'?';
+    d.onclick=()=>{document.getElementById('q-input').value=d.textContent;ask();};
+    h.appendChild(d);
+  });
+  const extra=document.createElement('div');extra.className='hint';extra.textContent='Give me an example.';
+  extra.onclick=()=>{document.getElementById('q-input').value=extra.textContent;if(OCR_DONE)ask();};
+  h.appendChild(extra);
+}
+function addUserMsg(t){const c=document.getElementById('messages');const d=document.createElement('div');d.className='msg user';d.innerHTML='<div class="bubble">'+esc(t)+'</div>';c.appendChild(d);sc();}
+function addBotMsg(t,m=null){
+  const c=document.getElementById('messages');const d=document.createElement('div');d.className='msg bot';
+  let ex='';
+  if(m){
+    const pct=Math.round((m.baseline-m.usedToks)/m.baseline*100);
+    ex='<div class="prune-card"><span style="font-size:18px">✂️</span><div><strong>'+m.prunedIdx.length+' chapters pruned · '+m.usedToks.toLocaleString()+' tokens · saved '+pct+'% · 2G ready ✓</strong>Only relevant chapter text sent — no images ever.</div></div><div class="log">'+m.log+'</div>';
+  }
+  d.innerHTML='<div class="bubble">'+fmt(t)+'</div>'+ex+'<div class="msg-meta"><span>Vidya AI</span>'+(m?'<span class="tag green">'+m.usedToks.toLocaleString()+' tokens</span><span class="tag orange">baseline: '+m.baseline.toLocaleString()+'</span>':'')+'</div>';
+  c.appendChild(d);sc();
+}
+function sysMsg(t){const c=document.getElementById('messages');const d=document.createElement('div');d.className='msg bot';d.innerHTML='<div class="bubble" style="background:#f0f9f4;border-color:#2D7A4F33;font-size:12.5px">'+fmt(t)+'</div>';c.appendChild(d);sc();}
+let tn=0;
+function addThinking(t){const id='tk'+(++tn);const c=document.getElementById('messages');const d=document.createElement('div');d.className='msg bot';d.id=id;d.innerHTML='<div class="thinking"><div class="spinner"></div><span>'+t+'</span></div>';c.appendChild(d);sc();return id;}
+function upThinking(id,t){const el=document.getElementById(id);if(el)el.querySelector('span').textContent=t;}
+function rmThinking(id){document.getElementById(id)?.remove();}
+function sc(){const c=document.getElementById('messages');c.scrollTop=c.scrollHeight;}
+function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(OCR_DONE)ask();}}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px';}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>
