@@ -38,7 +38,7 @@ Answer from your actual textbook
 ### Web App (`education_tutor.html`)
 
 1. **Get a free Groq API key** at [console.groq.com](https://console.groq.com)
-2. Open `education_tutor.html` in any modern browser (Chrome, Firefox, Edge)
+2. Open `index.html` in any modern browser (Chrome, Firefox, Edge)
 3. Enter your Groq API key and click **Save**
 4. Upload your PDF textbook
 5. Wait ~1–2 minutes for OCR to extract text from all chapters (one-time setup)
