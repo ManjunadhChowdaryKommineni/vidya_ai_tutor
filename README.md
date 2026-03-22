@@ -1,121 +1,97 @@
-Preview
-Code
-Blame
-151 lines (107 loc) · 4.61 KB
-ð Vidya â AI Tutor for Rural India
-An intelligent tutoring system using Context Pruning to reduce LLM token usage by 85–92%, making AI-powered education viable on 2G networks.
+📚 Vidya — AI Tutor for Rural India
 
+Vidya is an AI-based tutoring system designed to make quality education accessible even in low-bandwidth environments. It uses a custom context pruning approach to reduce unnecessary data processing, lowering LLM token usage by up to 85–92% while still providing accurate answers from textbook content.
 
-ð¿ What is Vidya?
+🌿 Overview
 
-Vidya is a two-part project:
+The project has two main components:
 
-File What it is
-index.html A single-file web app â upload any PDF textbook and ask questions instantly
-context_pruning_rag.
-ipynb A Google Colab notebook implementing the full Context Pruning RAG pipeline with cost comparison
+index.html – A lightweight browser-based application where users can upload any textbook PDF and ask questions interactively.
+context_pruning_rag.ipynb – A Google Colab notebook that demonstrates the full pipeline and compares performance with a standard Retrieval-Augmented Generation (RAG) system.
+🧠 Core Concept: Context Pruning
 
-ð§ The Core Technique: Context Pruning
-Standard RAG sends the entire book as context on every query.
-Context Pruning identifies relevant chapters first, then sends only those â cutting tokens by 85–92%.
+Traditional RAG systems retrieve multiple chunks of text for every query, often including irrelevant information. This increases both token usage and cost.
 
-Student Question
-â
-Context Pruning â scores each chapter by keyword match (no API call)
-â
-Relevant Chapter(s) Only â 1-2 chapters instead of all 13
-â
-Groq LLM â receives ~3,000 tokens instead of ~40,000
-â
-Answer from your actual textbook
+Vidya improves this by introducing context pruning, where the system first identifies the most relevant chapters before sending content to the language model.
 
-ð How to Use
-Web App (education_tutor.html)
-Get a free Groq API key at console.groq.com
-Open index.html in any modern browser (Chrome, Firefox, Edge)
-Enter your Groq API key and click Save
-Upload your PDF textbook
-Wait ~1–2 minutes for OCR to extract text from all chapters (one-time setup)
-Ask any question â answers are instant after setup!
+Workflow
+The user asks a question
+The system analyzes chapter titles and content using keyword matching
+Only the top 1–2 relevant chapters are selected
+Filtered content is sent to the LLM
+The model generates a precise answer based on the selected context
 
-Works with any PDF â including PDFs with broken font encoding (like NCERT textbooks), because text is extracted using Tesseract.js OCR, not native PDF text parsing.
+This approach reduces the amount of text sent from around 40,000 tokens to ~3,000 tokens per query.
 
+🚀 How to Use
+Web Application
+Get a free API key from Groq
+Open index.html in a browser
+Enter the API key
+Upload a textbook PDF
+Wait for the one-time OCR process
+Start asking questions
 
-Colab Notebook (context_pruning_rag.
-ipynb)
-Open in Google Colab
-Run all cells in order
-Upload your PDF when prompted
-The notebook runs both the baseline RAG and Context Pruning systems on test questions
-A cost summary table shows the token and cost savings
-
-âï¸ Technologies Used
-Web App
-Technology Purpose
-PDF.js (Mozilla) Renders PDF pages to Canvas in the browser
-Tesseract.js v5 Browser-based OCR engine (WebAssembly) â reads pages visually, bypasses broken fonts
-Groq API + llama-3.1-8b-instant Fast, cheap LLM for generating answers from text
-Plain HTML / CSS / JS No frameworks, no build tools, no server needed
+The app uses OCR (Tesseract.js), allowing it to work even with scanned or poorly encoded PDFs.
 
 Colab Notebook
-Technology Purpose
-LangChain RAG pipeline framework
-pdfplumber PDF text extraction
-FAISS Vector store for baseline RAG
-HuggingFace Embeddings sentence-transformers/all-MiniLM-L6-v2
-LangChain-Groq Groq LLM integration
+Open the notebook in Google Colab
+Run all cells in order
+Upload a PDF file
+Execute test queries
+Compare results between baseline RAG and context pruning
 
-ð Cost Comparison
-Metric Baseline RAG Context Pruning
-Tokens per query ~40,000 ~3,000
-Data per query ~160 KB ~12 KB
-Cost per query ~$0.000200 ~$0.000015
-Token reduction — 85–92%
+A summary table shows token usage and cost savings for each query.
 
-ð Repository Structure
+⚙️ Technologies Used
+Web App
+PDF.js – renders PDF pages in the browser
+Tesseract.js – extracts text using OCR
+Groq API (LLaMA 3.1) – generates answers
+HTML, CSS, JavaScript – frontend implementation
+Notebook
+LangChain – builds the RAG pipeline
+FAISS – vector database for baseline retrieval
+HuggingFace Embeddings – semantic encoding
+pdfplumber / PyPDF – PDF text extraction
+LangChain-Groq – LLM integration
+📊 Performance Comparison
+Metric	Baseline RAG	Context Pruning
+Tokens per query	~40,000	~3,000
+Data sent	~160 KB	~12 KB
+Cost per query	~$0.000200	~$0.000015
+Reduction	—	85–92%
+📁 Project Structure
 vidya/
-âââ education_tutor.html â Complete web app (single file, open in browser)
-âââ context_pruning_rag.
-ipynb â Google Colab notebook with cost comparison
-âââ README.md
+├── index.html
+├── context_pruning_rag.ipynb
+└── README.md
+🌐 Designed for Low-Bandwidth Use
+OCR runs only once during setup
+Each query sends minimal text (around 4–6 KB)
+No images are transmitted after processing
+Works efficiently even on slow internet connections
+🔑 API Key Setup
+Sign up on Groq
+Generate an API key
+Paste it into the web app or notebook
 
-ð Why 2G-Friendly?
+The free tier is sufficient for regular usage.
 
-Setup OCR happens once (ideally on WiFi) â ~1–2 minutes
-Every query after setup sends only ~4–6 KB of plain text to Groq
-No images are transmitted at query time
-A 2G connection (50–100 kbps) handles 4–6 KB in under 1 second
+🧮 Chapter Selection Method
 
-ð Getting a Groq API Key
-Go to console.groq.com
-Sign up for a free account
-Navigate to API Keys â Create API Key
-Copy the key (starts with gsk_...)
-Paste it into the web app or the notebook
-Groq's free tier is sufficient for hundreds of queries.
+Instead of relying on embeddings for pruning, the system uses a lightweight scoring approach:
 
+Matches between question keywords and chapter titles are given higher weight
+Matches within chapter content are given lower weight
 
-ð How Context Pruning Scores Chapters
-for each chapter:
-score = 0
-for each keyword in question (words > 3 chars):
-if keyword in chapter_title: score += 3 # strong signal
-if keyword in chapter_text: score += 1 # weaker signal
+The top-ranked chapters are selected, and all others are ignored.
 
-select top 2 chapters by score
-prune all others
-This runs entirely in JavaScript (web app) or Python (notebook) â no extra API call needed for pruning.
+⚠️ Limitations
+OCR processes only a subset of pages per chapter
+Chapter detection depends on standard formatting
+API key is not stored permanently
+Refreshing the page requires reprocessing
+📄 License
 
-
-â ï¸ Limitations
-OCR samples 3 pages per chapter (first, middle, last).
-Content on other pages may be missed.
-Chapter detection uses regex for "Chapter N" headings.
-Non-standard formats fall back to 20-page equal splits.
-The Groq API key is stored in browser memory only â not persisted between sessions.
-
-Refreshing the page requires re-running OCR.
-
-
-ð License
-MIT â free to use, modify, and distribute.
+This project is released under the MIT License and can be freely used and modified.
