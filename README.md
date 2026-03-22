@@ -87,7 +87,7 @@ A summary table shows token usage and cost savings for each query.
 | ---------------- | ------------ | --------------- |
 | Tokens per query | ~40,000      | ~3,000          |
 | Data sent        | ~160 KB      | ~12 KB          |
-| Cost per query   | ~$0.000200   | ~$0.000015      |
+| Cost per query   | ~₹0.0166   | ~₹0.0012      |
 | Reduction        | —            | 85–92%          |
 
 ---
