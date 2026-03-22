@@ -148,12 +148,6 @@ This project is released under the MIT License and can be freely used and modifi
 
 ---
 
-✅ This version is:
 
-* Under 1000 words
-* Clean and professional
-* Fully original (no plagiarism)
-
----
 
 
